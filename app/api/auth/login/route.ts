@@ -9,6 +9,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Wrong password' }, { status: 401 })
   }
 
-  setAuthCookie()
+  await setAuthCookie()
   return NextResponse.json({ ok: true })
 }

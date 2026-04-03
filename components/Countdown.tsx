@@ -1,18 +1,17 @@
 'use client'
 // components/Countdown.tsx
 import { useState, useEffect } from 'react'
-
-// Hard stop: April 11, 2025 at 11:00 AM EAT (UTC+3)
-const DEADLINE = new Date('2025-04-11T08:00:00Z') // 11:00 AM EAT = 08:00 UTC
+import { getHackathonDeadline } from '@/lib/time'
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 
 export default function Countdown() {
   const [parts, setParts] = useState({ d: 0, h: 0, m: 0, s: 0, past: false })
+  const [deadline] = useState(() => getHackathonDeadline())
 
   useEffect(() => {
     function tick() {
-      const diff = DEADLINE.getTime() - Date.now()
+      const diff = deadline.getTime() - Date.now()
       if (diff <= 0) { setParts({ d: 0, h: 0, m: 0, s: 0, past: true }); return }
       const d = Math.floor(diff / 86400000)
       const h = Math.floor((diff % 86400000) / 3600000)
@@ -23,7 +22,7 @@ export default function Countdown() {
     tick()
     const t = setInterval(tick, 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [deadline])
 
   if (parts.past) {
     return (
@@ -39,10 +38,10 @@ export default function Countdown() {
   }
 
   const cells = [
-    { label: 'days',  val: parts.d },
+    { label: 'days', val: parts.d },
     { label: 'hours', val: parts.h },
-    { label: 'mins',  val: parts.m },
-    { label: 'secs',  val: parts.s },
+    { label: 'mins', val: parts.m },
+    { label: 'secs', val: parts.s },
   ]
 
   const urgent = parts.d === 0 && parts.h < 12

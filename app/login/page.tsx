@@ -45,7 +45,7 @@ function LoginForm() {
             fontWeight: 500, letterSpacing: '.06em',
             color: 'var(--text)', marginBottom: '.5rem',
           }}>
-            HACK/HUB
+            Co-Anthro Space
           </div>
           <p style={{ fontSize: '.85rem', color: 'var(--text-2)' }}>
             Team workspace · April 2–11

@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react'
 import { usePolling } from '@/hooks/usePolling'
 import { DAYS, TOTAL_TASKS, PHASE_META, WHO_META, type Who } from '@/lib/taskData'
+import { getHackathonDayIndex } from '@/lib/time'
+import { getTeamMemberName } from '@/lib/team'
 
 interface TaskState {
   [key: string]: { checked: boolean; checked_by: string; checked_at: string }
@@ -10,23 +12,21 @@ interface TaskState {
 
 const FILTER_OPTIONS: { val: string; label: string }[] = [
   { val: 'ALL', label: 'All tasks' },
-  { val: 'A',   label: 'Person A · Product' },
-  { val: 'B',   label: 'Person B · Builder' },
-  { val: 'C',   label: 'Person C · Design' },
+  { val: 'A', label: `${getTeamMemberName('A')} · Product` },
+  { val: 'B', label: `${getTeamMemberName('B')} · Builder` },
+  { val: 'C', label: `${getTeamMemberName('C')} · Design` },
 ]
 
 function getTodayDayIndex() {
-  const start = new Date('2025-04-02T00:00:00')
-  const diff  = Math.floor((Date.now() - start.getTime()) / 86400000)
-  return Math.max(0, Math.min(diff, DAYS.length - 1))
+  return getHackathonDayIndex()
 }
 
 export default function TasksPage() {
   const [taskState, setTaskState] = useState<TaskState>({})
-  const [loading, setLoading]     = useState(true)
-  const [filter, setFilter]       = useState<string>('ALL')
-  const [openDay, setOpenDay]     = useState<number>(getTodayDayIndex())
-  const [toggling, setToggling]   = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<string>('ALL')
+  const [openDay, setOpenDay] = useState<number>(getTodayDayIndex())
+  const [toggling, setToggling] = useState<string | null>(null)
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -66,8 +66,8 @@ export default function TasksPage() {
   }
 
   const doneTasks = Object.values(taskState).filter(v => v.checked).length
-  const pct       = Math.round((doneTasks / TOTAL_TASKS) * 100)
-  const todayI    = getTodayDayIndex()
+  const pct = Math.round((doneTasks / TOTAL_TASKS) * 100)
+  const todayI = getTodayDayIndex()
 
   return (
     <div className="page">
@@ -138,9 +138,9 @@ export default function TasksPage() {
             return taskState[`${di}-${origI}`]?.checked
           }).length
 
-          const isToday    = di === todayI
+          const isToday = di === todayI
           const hasMilestone = day.tasks.some(t => t.title.startsWith('MILESTONE') || t.title.startsWith('HARD STOP'))
-          const isOpen     = openDay === di
+          const isOpen = openDay === di
 
           return (
             <div key={di} className="card" style={{
@@ -183,12 +183,12 @@ export default function TasksPage() {
                 <div style={{ borderTop: `1px solid ${pc.border}` }}>
                   {visibleTasks.map((task, tii) => {
                     const origI = day.tasks.indexOf(task)
-                    const key   = `${di}-${origI}`
-                    const done  = taskState[key]?.checked ?? false
-                    const by    = taskState[key]?.checked_by
-                    const wm    = WHO_META[task.who]
+                    const key = `${di}-${origI}`
+                    const done = taskState[key]?.checked ?? false
+                    const by = taskState[key]?.checked_by
+                    const wm = WHO_META[task.who]
                     const isMilestone = task.title.startsWith('MILESTONE') || task.title.startsWith('HARD STOP')
-                    const isToggling  = toggling === key
+                    const isToggling = toggling === key
 
                     return (
                       <div

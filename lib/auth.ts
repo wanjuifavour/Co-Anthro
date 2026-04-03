@@ -1,12 +1,15 @@
 // lib/auth.ts
 import { cookies } from 'next/headers'
+import { createAuthToken, verifyAuthToken } from '@/lib/auth-token'
 
 const COOKIE_NAME = 'hub_auth'
-const COOKIE_VALUE = 'authenticated'
 const MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
-export function setAuthCookie() {
-  cookies().set(COOKIE_NAME, COOKIE_VALUE, {
+export async function setAuthCookie() {
+  const cookieStore = await cookies()
+  const token = await createAuthToken()
+
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -15,12 +18,17 @@ export function setAuthCookie() {
   })
 }
 
-export function clearAuthCookie() {
-  cookies().delete(COOKIE_NAME)
+export async function clearAuthCookie() {
+  const cookieStore = await cookies()
+
+  cookieStore.delete(COOKIE_NAME)
 }
 
-export function isAuthenticated(): boolean {
-  return cookies().get(COOKIE_NAME)?.value === COOKIE_VALUE
+export async function isAuthenticated(): Promise<boolean> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(COOKIE_NAME)?.value
+
+  return verifyAuthToken(token)
 }
 
 export function checkPassword(input: string): boolean {

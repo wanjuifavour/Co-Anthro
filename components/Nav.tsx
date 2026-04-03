@@ -44,7 +44,7 @@ export default function Nav() {
           color: '#F7F6F2', letterSpacing: '.04em', fontWeight: 500,
           whiteSpace: 'nowrap', marginRight: '.5rem',
         }}>
-          HACK/HUB
+          Co-Anthro Space
         </span>
 
         {/* Links */}

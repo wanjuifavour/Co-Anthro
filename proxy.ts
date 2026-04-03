@@ -1,10 +1,11 @@
 // proxy.ts
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { verifyAuthToken } from '@/lib/auth-token'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/_next', '/favicon']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/_next', '/favicon', '/sw.js']
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Allow public paths
@@ -13,7 +14,7 @@ export function proxy(req: NextRequest) {
   }
 
   const cookie = req.cookies.get('hub_auth')
-  if (cookie?.value !== 'authenticated') {
+  if (!(await verifyAuthToken(cookie?.value))) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('from', pathname)
     return NextResponse.redirect(loginUrl)

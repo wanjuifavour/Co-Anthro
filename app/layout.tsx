@@ -4,7 +4,7 @@ import './globals.css'
 import Nav from '@/components/Nav'
 
 export const metadata: Metadata = {
-  title: 'Hackathon Hub',
+  title: 'Co-Anthro',
   description: 'Team project tracker for the AI Hackathon',
 }
 

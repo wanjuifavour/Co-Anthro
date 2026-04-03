@@ -2,6 +2,7 @@
 // app/docs/page.tsx
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePolling } from '@/hooks/usePolling'
+import { TEAM_ROLES, getTeamMemberName, type TeamRole } from '@/lib/team'
 
 const TABS = [
   {
@@ -144,18 +145,19 @@ interface DocMap {
 function timeAgo(iso: string) {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()
-  if (diff < 60000)   return 'just now'
+  if (diff < 60000) return 'just now'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000)return `${Math.floor(diff / 3600000)}h ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
   return `${Math.floor(diff / 86400000)}d ago`
 }
 
 export default function DocsPage() {
-  const [docs, setDocs]         = useState<DocMap>({})
+  const [docs, setDocs] = useState<DocMap>({})
   const [activeTab, setActiveTab] = useState(TABS[0].slug)
+  const [activeEditor, setActiveEditor] = useState<TeamRole>('A')
   const [localContent, setLocalContent] = useState<Record<string, string>>({})
   const [saveStatus, setSaveStatus] = useState<Record<string, string>>({})
-  const [loading, setLoading]   = useState(true)
+  const [loading, setLoading] = useState(true)
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const fetchDocs = useCallback(async () => {
@@ -206,7 +208,7 @@ export default function DocsPage() {
       await fetch('/api/docs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, content }),
+        body: JSON.stringify({ slug, content, updated_by: getTeamMemberName(activeEditor) }),
       })
       setSaveStatus(prev => ({ ...prev, [slug]: 'saved' }))
       setTimeout(() => setSaveStatus(prev => ({ ...prev, [slug]: '' })), 2000)
@@ -216,15 +218,40 @@ export default function DocsPage() {
   }
 
   const activeTabMeta = TABS.find(t => t.slug === activeTab)!
-  const activeDoc     = docs[activeTab]
-  const content       = localContent[activeTab] ?? ''
-  const status        = saveStatus[activeTab] ?? ''
+  const activeDoc = docs[activeTab]
+  const content = localContent[activeTab] ?? ''
+  const status = saveStatus[activeTab] ?? ''
 
   return (
     <div className="page-wide">
       <div style={{ marginBottom: '1.5rem' }}>
         <h1>Docs</h1>
         <p className="text-2 text-sm mt-1">All project documentation in one place. Changes auto-save as you type.</p>
+      </div>
+
+      {/* Editor selector */}
+      <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <span style={{ alignSelf: 'center', fontSize: '.82rem', color: 'var(--text-2)' }}>Editing as:</span>
+        {TEAM_ROLES.map(role => {
+          const active = activeEditor === role
+          return (
+            <button
+              key={role}
+              type="button"
+              onClick={() => setActiveEditor(role)}
+              style={{
+                fontFamily: 'var(--font-sans)', fontSize: '.82rem', fontWeight: 500,
+                padding: '.3rem .85rem', borderRadius: 20,
+                border: `0.5px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
+                background: active ? 'var(--bg-subtle)' : 'transparent',
+                color: active ? 'var(--text)' : 'var(--text-2)',
+                cursor: 'pointer',
+              }}
+            >
+              {getTeamMemberName(role)}
+            </button>
+          )
+        })}
       </div>
 
       {/* Tabs */}

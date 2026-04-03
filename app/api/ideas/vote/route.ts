@@ -10,7 +10,7 @@ interface IdeaRecord {
 export async function POST(req: NextRequest) {
   try {
     const { idea_id, person, criteria, value } = await req.json()
-    // person: 'A' | 'B' | 'C', criteria: 'impact'|'feasibility'|'demo'|'relevance', value: 1|2|3
+    // person: 'A' | 'B' | 'C', criteria: 'impact'|'feasibility'|'demo'|'relevance', value: 0|1|2|3
 
     // Check not locked
     const winner = await xataFindOne<{ value: string }>('settings', { key: 'winner_id' })
@@ -22,7 +22,19 @@ export async function POST(req: NextRequest) {
     if (!idea) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const scores = { ...(idea.scores ?? {}) }
-    scores[person] = { ...(scores[person] ?? {}), [criteria]: value }
+
+    if (value === 0) {
+      const personScores = { ...(scores[person] ?? {}) }
+      delete personScores[criteria]
+
+      if (Object.keys(personScores).length === 0) {
+        delete scores[person]
+      } else {
+        scores[person] = personScores
+      }
+    } else {
+      scores[person] = { ...(scores[person] ?? {}), [criteria]: value }
+    }
 
     const updated = await xataUpdate('ideas', idea_id, { scores })
     return NextResponse.json(updated)

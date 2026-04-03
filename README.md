@@ -1,8 +1,8 @@
-# Hackathon Hub
+# Co-Anthro
 
-Internal team tracker for the AI Hackathon · April 2–11, 2025.
+Internal team tracker for the AI Hackathon · April 2–11, current year.
 
-**Stack:** Next.js 14 App Router · TypeScript · Xata (REST API, no SDK) · IBM Plex Sans/Mono
+**Stack:** Next.js 14 App Router · TypeScript · Xata Postgres · IBM Plex Sans/Mono
 
 ---
 
@@ -78,9 +78,9 @@ Internal team tracker for the AI Hackathon · April 2–11, 2025.
 
 ## 3. Get your Xata credentials
 
-1. In your Xata workspace, go to **Settings → API keys** and create a new key.
-2. Your database URL is shown on the database page — it looks like:
-   `https://your-workspace-abc123.eu-west-1.xata.sh/db/hackathon-hub:main`
+1. In your Xata workspace, copy the PostgreSQL connection string for your database.
+2. It should look like:
+   `postgresql://xata:...@<host>.xata.tech/xata?sslmode=require`
 
 ---
 
@@ -100,8 +100,7 @@ cp .env.local.example .env.local
 Edit `.env.local`:
 
 ```env
-XATA_API_KEY=xau_your_actual_key_here
-XATA_DB_URL=https://your-workspace.region.xata.sh/db/hackathon-hub:main
+XATA_DB_URL=postgresql://xata:...@<host>.xata.tech/xata?sslmode=require
 TEAM_PASSWORD=pick-any-team-password
 AUTH_SECRET=any-long-random-string-32-chars-minimum
 ```

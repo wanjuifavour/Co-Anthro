@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Countdown from '@/components/Countdown'
 import { usePolling } from '@/hooks/usePolling'
 import { DAYS, TOTAL_TASKS, PHASE_META, WHO_META } from '@/lib/taskData'
+import { getHackathonDayIndex, getHackathonYear } from '@/lib/time'
 
 interface TaskState {
   [key: string]: { checked: boolean; checked_by: string; checked_at: string }
@@ -13,18 +14,14 @@ interface TaskState {
 interface IdeaRecord { id: string; title: string; problem_statement: string }
 
 const NAV_CARDS = [
-  { href: '/ideation', label: 'Ideation', desc: 'Vote and lock your idea',              emoji: '💡' },
-  { href: '/tasks',    label: 'Tasks',    desc: 'Day-by-day task board',                emoji: '✅' },
-  { href: '/docs',     label: 'Docs',     desc: 'PRD, personas, prompts & more',        emoji: '📄' },
-  { href: '/notes',    label: 'Notes',    desc: 'Daily log and team observations',       emoji: '📝' },
+  { href: '/ideation', label: 'Ideation', desc: 'Vote and lock your idea', emoji: '💡' },
+  { href: '/tasks', label: 'Tasks', desc: 'Day-by-day task board', emoji: '✅' },
+  { href: '/docs', label: 'Docs', desc: 'PRD, personas, prompts & more', emoji: '📄' },
+  { href: '/notes', label: 'Notes', desc: 'Daily log and team observations', emoji: '📝' },
 ]
 
 function getTodayDayIndex() {
-  // April 2 = day 0 … April 11 = day 9
-  const start = new Date('2025-04-02T00:00:00')
-  const now   = new Date()
-  const diff  = Math.floor((now.getTime() - start.getTime()) / 86400000)
-  return Math.max(0, Math.min(diff, DAYS.length - 1))
+  return getHackathonDayIndex()
 }
 
 export default function DashboardPage() {
@@ -49,19 +46,20 @@ export default function DashboardPage() {
 
   usePolling(fetchData, 5000)
 
-  const doneTasks  = Object.values(taskState).filter(v => v.checked).length
-  const pct        = TOTAL_TASKS > 0 ? Math.round((doneTasks / TOTAL_TASKS) * 100) : 0
+  const doneTasks = Object.values(taskState).filter(v => v.checked).length
+  const pct = TOTAL_TASKS > 0 ? Math.round((doneTasks / TOTAL_TASKS) * 100) : 0
   const todayIndex = getTodayDayIndex()
-  const today      = DAYS[todayIndex]
-  const pc         = PHASE_META[today.phase]
+  const today = DAYS[todayIndex]
+  const pc = PHASE_META[today.phase]
+  const year = getHackathonYear()
 
   return (
     <div className="page">
 
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <h1>Hackathon Hub</h1>
-        <p className="text-2 text-sm mt-1">AI Hackathon · Early Career Talent · April 2–11, 2025</p>
+        <h1>Co-Anthro</h1>
+        <p className="text-2 text-sm mt-1">AI Hackathon · Early Career Talent · April 2–11, {year}</p>
       </div>
 
       {/* Countdown */}

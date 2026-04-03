@@ -1,16 +1,17 @@
 'use client'
 // app/ideation/page.tsx
-import { useState, useCallback, FormEvent } from 'react'
+import { Fragment, useState, useCallback, FormEvent } from 'react'
 import { usePolling } from '@/hooks/usePolling'
+import { TEAM_ROLES, type TeamRole, getTeamMemberName } from '@/lib/team'
 
 const CRITERIA = [
-  { key: 'impact',       label: 'Impact',       desc: 'How meaningful is this for early career talent?' },
-  { key: 'feasibility',  label: 'Feasibility',  desc: 'Can we build a compelling demo in 8 days?' },
-  { key: 'demo',         label: 'Demo-ability',  desc: 'Will this impress judges in a 15-min presentation?' },
-  { key: 'relevance',    label: 'Relevance',     desc: 'How well does it fit the hackathon theme?' },
+  { key: 'impact', label: 'Impact', desc: 'How meaningful is this for early career talent?' },
+  { key: 'feasibility', label: 'Feasibility', desc: 'Can we build a compelling demo in 8 days?' },
+  { key: 'demo', label: 'Demo-ability', desc: 'Will this impress judges in a 15-min presentation?' },
+  { key: 'relevance', label: 'Relevance', desc: 'How well does it fit the hackathon theme?' },
 ]
 
-const PEOPLE = ['A', 'B', 'C']
+const PEOPLE = TEAM_ROLES
 
 interface IdeaRecord {
   id: string
@@ -33,22 +34,22 @@ function totalScore(idea: IdeaRecord) {
 function maxScore() { return PEOPLE.length * CRITERIA.length * 3 }
 
 export default function IdeationPage() {
-  const [ideas, setIdeas]         = useState<IdeaRecord[]>([])
-  const [winnerId, setWinnerId]   = useState<string | null>(null)
-  const [activePerson, setActivePerson] = useState<string>('A')
-  const [loading, setLoading]     = useState(true)
+  const [ideas, setIdeas] = useState<IdeaRecord[]>([])
+  const [winnerId, setWinnerId] = useState<string | null>(null)
+  const [activePerson, setActivePerson] = useState<TeamRole>('A')
+  const [loading, setLoading] = useState(true)
 
   // New idea form
-  const [title, setTitle]         = useState('')
-  const [desc, setDesc]           = useState('')
+  const [title, setTitle] = useState('')
+  const [desc, setDesc] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
   // Lock + problem statement
   const [lockTarget, setLockTarget] = useState<string | null>(null)
   const [problemStmt, setProblemStmt] = useState('')
-  const [locking, setLocking]     = useState(false)
-  const [savingPs, setSavingPs]   = useState(false)
+  const [locking, setLocking] = useState(false)
+  const [savingPs, setSavingPs] = useState(false)
 
   const winner = ideas.find(i => i.id === winnerId)
 
@@ -163,7 +164,7 @@ export default function IdeationPage() {
             {PEOPLE.map(p => (
               <button key={p} className={`btn ${activePerson === p ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => setActivePerson(p)}>
-                Person {p}
+                {getTeamMemberName(p)}
               </button>
             ))}
           </div>
@@ -254,13 +255,13 @@ export default function IdeationPage() {
                         color: activePerson === p && !winnerId ? 'var(--text)' : 'var(--text-3)',
                         textAlign: 'center', fontWeight: activePerson === p && !winnerId ? 600 : 400,
                       }}>
-                        {p}
+                        {getTeamMemberName(p)}
                       </div>
                     ))}
 
                     {/* Criteria rows */}
                     {CRITERIA.map(c => (
-                      <>
+                      <Fragment key={c.key}>
                         <div key={`label-${c.key}`} title={c.desc} style={{ fontSize: '.82rem', cursor: 'help' }}>
                           {c.label}
                         </div>
@@ -270,7 +271,11 @@ export default function IdeationPage() {
                           return (
                             <div key={`${p}-${c.key}`} style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
                               {[1, 2, 3].map(v => (
-                                <button key={v} onClick={() => isMe && vote(idea.id, c.key, v)}
+                                <button
+                                  key={v}
+                                  onClick={() => isMe && vote(idea.id, c.key, val === v ? 0 : v)}
+                                  aria-pressed={val === v}
+                                  title={val === v ? 'Click to clear vote' : `Set ${v}`}
                                   style={{
                                     width: 22, height: 22, borderRadius: 3,
                                     border: val === v ? '1.5px solid var(--accent)' : '1px solid var(--border)',
@@ -287,7 +292,7 @@ export default function IdeationPage() {
                             </div>
                           )
                         })}
-                      </>
+                      </Fragment>
                     ))}
                   </div>
                 </div>

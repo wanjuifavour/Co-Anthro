@@ -2,6 +2,7 @@
 // app/notes/page.tsx
 import { useState, useCallback, FormEvent } from 'react'
 import { usePolling } from '@/hooks/usePolling'
+import { getTeamMemberName } from '../../lib/team'
 
 interface NoteRecord {
   id: string
@@ -11,9 +12,9 @@ interface NoteRecord {
 }
 
 const AUTHOR_META: Record<string, { label: string; bg: string; border: string; text: string }> = {
-  A: { label: 'Person A', bg: 'var(--a-bg)', border: 'var(--a-bd)', text: 'var(--a-tx)' },
-  B: { label: 'Person B', bg: 'var(--b-bg)', border: 'var(--b-bd)', text: 'var(--b-tx)' },
-  C: { label: 'Person C', bg: 'var(--c-bg)', border: 'var(--c-bd)', text: 'var(--c-tx)' },
+  A: { label: getTeamMemberName('A'), bg: 'var(--a-bg)', border: 'var(--a-bd)', text: 'var(--a-tx)' },
+  B: { label: getTeamMemberName('B'), bg: 'var(--b-bg)', border: 'var(--b-bd)', text: 'var(--b-tx)' },
+  C: { label: getTeamMemberName('C'), bg: 'var(--c-bg)', border: 'var(--c-bd)', text: 'var(--c-tx)' },
 }
 
 function formatDate(iso: string) {
@@ -37,12 +38,12 @@ function groupByDate(notes: NoteRecord[]) {
 }
 
 export default function NotesPage() {
-  const [notes, setNotes]       = useState<NoteRecord[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [author, setAuthor]     = useState('A')
-  const [content, setContent]   = useState('')
+  const [notes, setNotes] = useState<NoteRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [author, setAuthor] = useState('A')
+  const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError]       = useState('')
+  const [error, setError] = useState('')
 
   const fetchNotes = useCallback(async () => {
     try {
@@ -120,8 +121,8 @@ export default function NotesPage() {
               onChange={e => setContent(e.target.value)}
               placeholder={
                 author === 'A' ? 'e.g. User test with Wanjiru went well — she loved the roadmap view but got confused by the onboarding form. Simplify step 2.' :
-                author === 'B' ? 'e.g. AI call is working end-to-end. Response time ~4s. Prompt needs tweaking for edge case where user has no experience.' :
-                'e.g. Finished hi-fi mockups for all 3 screens. Shared Figma link in group chat. Colors and fonts are locked.'
+                  author === 'B' ? 'e.g. AI call is working end-to-end. Response time ~4s. Prompt needs tweaking for edge case where user has no experience.' :
+                    'e.g. Finished hi-fi mockups for all 3 screens. Shared Figma link in group chat. Colors and fonts are locked.'
               }
               required
             />
