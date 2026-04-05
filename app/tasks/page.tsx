@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { usePolling } from '@/hooks/usePolling'
 import { DAYS, TOTAL_TASKS, PHASE_META, WHO_META, type Who } from '@/lib/taskData'
 import { getHackathonDayIndex } from '@/lib/time'
-import { getTeamMemberName } from '@/lib/team'
+import { TEAM_ROLES, getTeamMemberName, type TeamRole } from '@/lib/team'
 
 interface TaskState {
   [key: string]: { checked: boolean; checked_by: string; checked_at: string }
@@ -21,10 +21,20 @@ function getTodayDayIndex() {
   return getHackathonDayIndex()
 }
 
+function getCheckedByLabel(checkedBy?: string) {
+  if (!checkedBy || checkedBy === 'team') return ''
+  if (checkedBy === 'ALL') return 'Full team'
+  if (TEAM_ROLES.includes(checkedBy as TeamRole)) {
+    return getTeamMemberName(checkedBy as TeamRole)
+  }
+  return checkedBy
+}
+
 export default function TasksPage() {
   const [taskState, setTaskState] = useState<TaskState>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('ALL')
+  const [checker, setChecker] = useState<TeamRole>('A')
   const [openDay, setOpenDay] = useState<number>(getTodayDayIndex())
   const [toggling, setToggling] = useState<string | null>(null)
 
@@ -41,18 +51,19 @@ export default function TasksPage() {
   async function toggleTask(dayI: number, taskI: number, currentlyChecked: boolean) {
     const key = `${dayI}-${taskI}`
     setToggling(key)
+    const checkedByName = getTeamMemberName(checker)
 
     // Optimistic update
     setTaskState(prev => ({
       ...prev,
-      [key]: { checked: !currentlyChecked, checked_by: 'team', checked_at: new Date().toISOString() },
+      [key]: { checked: !currentlyChecked, checked_by: checkedByName, checked_at: new Date().toISOString() },
     }))
 
     try {
       await fetch('/api/tasks', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_key: key, checked: !currentlyChecked, checked_by: filter }),
+        body: JSON.stringify({ task_key: key, checked: !currentlyChecked, checked_by: checkedByName }),
       })
     } catch {
       // Revert on failure
@@ -123,6 +134,35 @@ export default function TasksPage() {
         })}
       </div>
 
+      {/* Checker identity */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+        <span className="text-xs text-3">Checking tasks as:</span>
+        {TEAM_ROLES.map(role => {
+          const active = checker === role
+          const label = getTeamMemberName(role)
+          return (
+            <button
+              key={role}
+              type="button"
+              onClick={() => setChecker(role)}
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '.78rem',
+                fontWeight: 500,
+                padding: '.28rem .72rem',
+                borderRadius: 20,
+                border: `0.5px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
+                background: active ? 'var(--bg-subtle)' : 'transparent',
+                color: active ? 'var(--text)' : 'var(--text-2)',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* Day accordions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
         {DAYS.map((day, di) => {
@@ -185,7 +225,7 @@ export default function TasksPage() {
                     const origI = day.tasks.indexOf(task)
                     const key = `${di}-${origI}`
                     const done = taskState[key]?.checked ?? false
-                    const by = taskState[key]?.checked_by
+                    const by = getCheckedByLabel(taskState[key]?.checked_by)
                     const wm = WHO_META[task.who]
                     const isMilestone = task.title.startsWith('MILESTONE') || task.title.startsWith('HARD STOP')
                     const isToggling = toggling === key
@@ -233,7 +273,7 @@ export default function TasksPage() {
                           <p className="text-xs text-3" style={{ lineHeight: 1.6 }}>{task.detail}</p>
                           {done && by && by !== 'team' && (
                             <p className="text-xs text-3 mt-1" style={{ fontFamily: 'var(--font-mono)' }}>
-                              ✓ checked by Person {by}
+                              ✓ checked by {by}
                             </p>
                           )}
                         </div>

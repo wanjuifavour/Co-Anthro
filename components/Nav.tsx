@@ -5,11 +5,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const LINKS = [
-  { href: '/',          label: 'Dashboard' },
-  { href: '/ideation',  label: 'Ideation' },
-  { href: '/tasks',     label: 'Tasks' },
-  { href: '/docs',      label: 'Docs' },
-  { href: '/notes',     label: 'Notes' },
+  { href: '/', label: 'Dashboard' },
+  { href: '/ideation', label: 'Ideation' },
+  { href: '/tasks', label: 'Tasks' },
+  { href: '/docs', label: 'Docs' },
+  { href: '/notes', label: 'Notes' },
 ]
 
 export default function Nav() {

@@ -4,137 +4,164 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePolling } from '@/hooks/usePolling'
 import { TEAM_ROLES, getTeamMemberName, type TeamRole } from '@/lib/team'
 
+const DOC_DEFAULTS = {
+  persona: `Amara, 24 — Junior Data Analyst
+Situation: Three weeks into placement with a Dutch fintech. Remote from Nairobi, managing a 2-hour timezone gap, trying to adapt to a new work culture.
+Pain point: Gets vague feedback, does not know how to act on it, and feels vulnerable asking for help in front of a client manager.
+Need: A guide that feels safe, reads carefully, responds specifically, and helps her improve without making the struggle feel bigger than it is.
+Quote: "I work hard but I do not know if I am growing in the right direction."
+
+Brian — TS Associate at Tana
+Situation: Manages a portfolio of professionals across multiple client companies.
+Pain point: Too many messages to read deeply, cannot spot patterns without piecing them together manually, and often walks into calls without a clear view of what to probe.
+Need: A tool that reads everything and surfaces what matters, with risk flags and suggested questions before manager calls.`,
+  'user-journey': `1. Professional posts an end-of-day update in Slack.
+2. Tana Buddy reads the update, checks it against recent context, and replies in the thread with a warm, specific response.
+3. The same signal is summarized into the TS dashboard so associates can see portfolio health, risk flags, and trends.
+4. The professional can also DM Buddy for coaching, feedback interpretation, or support.
+5. If there is a wellbeing concern, the system flags it for TS with a proposed response plan.
+
+Key moment: the professional feels noticed and guided, while the TS associate gets the same situation in one place without manual triage.`,
+  prd: `PROBLEM
+Early-career Kenyan professionals placed with European companies have to prove themselves in unfamiliar work contexts, manage dual reporting, and grow fast without a reliable day-to-day guide.
+
+USER
+Primary user: the placed professional who needs coaching, clarification, and support inside Slack.
+Secondary user: the TS associate who needs real-time visibility across a portfolio of professionals.
+
+CORE FEATURES (MVP only)
+1. Slack-based EOD reading and thread response.
+2. Private DM coaching with structured AI responses.
+3. TS dashboard with portfolio health, risk flags, and manager sync prep.
+
+OUT OF SCOPE
+- Client manager access.
+- Full onboarding and consent flow.
+- Cohort analytics and advanced reporting.
+- Non-essential reflection automation.
+
+SUCCESS METRICS
+- Professionals feel understood and supported.
+- TS associates can identify who needs attention without reading every message.
+- Placement outcomes improve through earlier intervention.
+- A judge can understand the demo flow and the value in under 3 minutes.`,
+  'tech-stack': `FRONTEND
+Framework: Next.js
+Styling: App router UI with simple dashboard and docs views
+Hosted on: Vercel Hobby
+
+AI LAYER
+Model for EOD and coaching: Claude Haiku
+Model for manager sync briefs: Claude Sonnet
+Output format: structured JSON for downstream parsing
+
+BACKEND
+Runtime: Next.js API routes
+Database: Xata PostgreSQL endpoint
+Auth: simple team password cookie auth
+
+REPO
+GitHub repo: Co-Anthro
+Branching strategy: main as working branch for the hackathon workspace
+Deployment: Vercel auto-deploy from main
+
+ENVIRONMENT
+API keys needed: XATA_DB_URL, TEAM_PASSWORD, AUTH_SECRET`,
+  'ai-prompt': `SYSTEM PROMPT
+You are Tana Buddy, an AI support companion for early-career professionals placed through Tana.
+You respond inside Slack, read the latest end-of-day update, compare it with recent context, and reply in a warm, specific, and practical way.
+Return structured JSON only with fields for thread response, private DM response, health signal, reasoning, wellbeing concern, summary, proposed plan, and goal updates.
+
+USER INPUT FORMAT
+Professional name, company context, recent EOD text, goals, and prior recent summaries.
+
+EXPECTED OUTPUT FORMAT
+{
+  "thread_response": "...",
+  "dm_response": "...",
+  "health_signal": "stable | watch | at_risk",
+  "health_reasoning": "...",
+  "wellbeing_concern": false,
+  "wellbeing_summary": null,
+  "proposed_plan": null,
+  "goal_updates": []
+}
+
+EDGE CASES & GUARDRAILS
+- If the input is vague, keep the response grounded and ask at most one clarifying question.
+- If the message suggests distress, summarize without quoting private text verbatim.
+- Never mention internal policy or expose manager-facing content in the DM.
+
+SAMPLE INPUT
+EOD: I had a rough meeting with my manager today but I finished the data cleanup and I am waiting for comments.
+
+SAMPLE OUTPUT
+{
+  "thread_response": "...",
+  "dm_response": "...",
+  "health_signal": "watch",
+  "health_reasoning": "...",
+  "wellbeing_concern": false,
+  "wellbeing_summary": null,
+  "proposed_plan": null,
+  "goal_updates": []
+}`,
+  competitive: `TOOL 1: Manual TS tracking
+What it does: Helps associates keep notes and follow up manually.
+What it lacks: No automatic reading of EODs, no real-time risk signals, and no proactive coaching loop.
+Our angle vs this: Tana Buddy reads the signal where the work already happens and turns it into action.
+
+TOOL 2: Generic Slack bot
+What it does: Sends reminders or simple commands in Slack.
+What it lacks: No placement context, no coaching depth, and no support for TS portfolio visibility.
+Our angle vs this: Tana Buddy is purpose-built for placement support and associate oversight.
+
+TOOL 3: Generic wellbeing check-in tools
+What it does: Captures moods and wellness self-reports.
+What it lacks: Weak workflow integration and little connection to actual work output.
+Our angle vs this: Tana Buddy combines wellbeing signals with professional context and manager prep.
+
+SUMMARY
+Why our solution is different: it sits inside Slack, understands the placement context, and serves both the professional and TS associate.
+Kenya/Africa-specific advantage: it is tuned for early-career placement realities, time zones, and cross-cultural reporting pressure.`,
+} as const
+
 const TABS = [
   {
     slug: 'persona',
     label: 'Persona',
     emoji: '👤',
-    placeholder: `Name: [e.g. Amara, 24]
-Age: 
-Situation: [Recent grad, 6 months into first job at a mid-sized Nairobi firm]
-Goal: [Wants to grow into a product manager within 2 years]
-Pain point: [Doesn't know which skills to build, gets vague feedback from manager]
-Quote: ["I work hard but I don't know if I'm growing in the right direction"]`,
+    placeholder: DOC_DEFAULTS.persona,
   },
   {
     slug: 'user-journey',
     label: 'User Journey',
     emoji: '🗺️',
-    placeholder: `Step 1 — [User opens the app / enters their current role and goals]
-Step 2 — [AI analyzes their input and identifies skill gaps]
-Step 3 — [User sees a personalized learning roadmap]
-Step 4 — [User tracks progress week by week]
-Step 5 — [User gets value: clarity, confidence, a plan]
-
-Key moment: [The "aha" moment is when they see their gap visualized for the first time]`,
+    placeholder: DOC_DEFAULTS['user-journey'],
   },
   {
     slug: 'prd',
     label: 'PRD',
     emoji: '📋',
-    placeholder: `PROBLEM
-[One paragraph: what is broken, who suffers, why now]
-
-USER
-[Describe the primary user in 2-3 sentences]
-
-CORE FEATURES (MVP only)
-1. 
-2. 
-3. 
-
-OUT OF SCOPE
-- CV/resume building
-- Job matching
-- [Add others]
-
-SUCCESS METRICS
-- [e.g. A judge can complete a demo flow in under 3 minutes]
-- [e.g. AI output is accurate enough that 2/3 user testers find it useful]`,
+    placeholder: DOC_DEFAULTS.prd,
   },
   {
     slug: 'tech-stack',
     label: 'Tech Stack',
     emoji: '⚙️',
-    placeholder: `FRONTEND
-Framework: 
-Styling: 
-Hosted on: 
-
-AI LAYER
-Model: Claude claude-sonnet-4-20250514 (or specify)
-API key stored: [.env.local / Vercel env]
-Max tokens: 
-
-BACKEND (if needed)
-Runtime: 
-Database: 
-Auth: 
-
-REPO
-GitHub URL: 
-Branching strategy: [e.g. main = stable, dev = active work]
-Deployment: [e.g. Vercel auto-deploy from main]
-
-ENVIRONMENT
-API keys needed: ANTHROPIC_API_KEY, ...`,
+    placeholder: DOC_DEFAULTS['tech-stack'],
   },
   {
     slug: 'ai-prompt',
     label: 'AI Prompt',
     emoji: '🤖',
-    placeholder: `SYSTEM PROMPT
----
-[Write the system prompt here. Be specific about role, output format, and constraints]
-
-Example:
-"You are a career growth advisor specializing in early-career professionals in East Africa.
-Given a user's current role, experience level, and goals, identify their top 3 skill gaps
-and provide a prioritized 30-day learning plan. Return your response as JSON with the
-following structure: { gaps: string[], plan: { week: number, focus: string, resources: string[] }[] }"
----
-
-USER INPUT FORMAT
-[Describe what the user submits — e.g. role, years of experience, goals, current skills]
-
-EXPECTED OUTPUT FORMAT
-[Describe the structure Claude should return — JSON schema, markdown, plain text, etc.]
-
-EDGE CASES & GUARDRAILS
-- [e.g. If user input is too vague, ask one clarifying question]
-- [e.g. If goal is unrealistic for timeframe, gently reframe]
-
-SAMPLE INPUT
-[Paste a test input here]
-
-SAMPLE OUTPUT
-[Paste the expected/actual output here]`,
+    placeholder: DOC_DEFAULTS['ai-prompt'],
   },
   {
     slug: 'competitive',
     label: 'Competitive',
     emoji: '🔍',
-    placeholder: `TOOL 1: [Name]
-URL: 
-What it does: 
-What it lacks: 
-Our angle vs this: 
-
-TOOL 2: [Name]
-URL: 
-What it does: 
-What it lacks: 
-Our angle vs this: 
-
-TOOL 3: [Name]
-URL: 
-What it does: 
-What it lacks: 
-Our angle vs this: 
-
-SUMMARY
-Why our solution is different: 
-Kenya/Africa-specific advantage: `,
+    placeholder: DOC_DEFAULTS.competitive,
   },
 ]
 
@@ -158,6 +185,7 @@ export default function DocsPage() {
   const [localContent, setLocalContent] = useState<Record<string, string>>({})
   const [saveStatus, setSaveStatus] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const fetchDocs = useCallback(async () => {
@@ -217,6 +245,26 @@ export default function DocsPage() {
     }
   }
 
+  async function downloadSpecAsPdf() {
+    setDownloadingPdf(true)
+    try {
+      const res = await fetch('/api/docs/download?slug=tana-buddy-spec')
+      if (!res.ok) throw new Error('download failed')
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'tana-buddy-spec.pdf'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
+
   const activeTabMeta = TABS.find(t => t.slug === activeTab)!
   const activeDoc = docs[activeTab]
   const content = localContent[activeTab] ?? ''
@@ -227,6 +275,23 @@ export default function DocsPage() {
       <div style={{ marginBottom: '1.5rem' }}>
         <h1>Docs</h1>
         <p className="text-2 text-sm mt-1">All project documentation in one place. Changes auto-save as you type.</p>
+        <div style={{ marginTop: '.75rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={downloadSpecAsPdf}
+            disabled={downloadingPdf}
+            style={{
+              fontFamily: 'var(--font-sans)', fontSize: '.82rem', fontWeight: 500,
+              padding: '.45rem .85rem', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-strong)',
+              background: 'var(--bg-subtle)',
+              color: 'var(--text)', cursor: downloadingPdf ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {downloadingPdf ? 'Preparing PDF…' : 'Download Tana Buddy Spec PDF'}
+          </button>
+          <span className="text-xs text-3">The spec itself is download-only. The editable tabs below contain the extracted working docs.</span>
+        </div>
       </div>
 
       {/* Editor selector */}
