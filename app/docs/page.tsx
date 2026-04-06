@@ -293,7 +293,7 @@ export default function DocsPage() {
           >
             {downloadingPdf ? 'Preparing PDF…' : 'Download Tana Buddy Spec PDF'}
           </button>
-          <span className="text-xs text-3">Uploaded and ready for download.</span>
+          <span className="text-xs text-3">Full Spec document,this is the source of truth for everything we do in detail.</span>
         </div>
       </div>
 
