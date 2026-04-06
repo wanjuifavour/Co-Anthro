@@ -1,59 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import { xataFindOne } from '@/lib/xata'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 
 const VALID_SLUGS = ['persona', 'user-journey', 'prd', 'tech-stack', 'ai-prompt', 'competitive', 'tana-buddy-spec']
-
-interface DocRecord {
-    slug: string
-    content: string
-    updated_by: string
-    updated_at: string
+const DOCS_DIRECTORY = path.join(process.cwd(), 'docs')
+const PDF_FILES_BY_SLUG: Record<string, string> = {
+    'tana-buddy-spec': 'Tana-buddy.pdf',
 }
 
-function wrapLine(text: string, maxChars: number) {
-    if (!text) return ['']
-
-    const words = text.split(/\s+/)
-    const lines: string[] = []
-    let current = ''
-
-    for (const word of words) {
-        const candidate = current ? `${current} ${word}` : word
-        if (candidate.length <= maxChars) {
-            current = candidate
-            continue
-        }
-
-        if (current) lines.push(current)
-
-        if (word.length <= maxChars) {
-            current = word
-        } else {
-            const chunks = word.match(new RegExp(`.{1,${maxChars}}`, 'g')) ?? [word]
-            lines.push(...chunks.slice(0, -1))
-            current = chunks[chunks.length - 1] ?? ''
-        }
-    }
-
-    if (current) lines.push(current)
-    return lines.length ? lines : ['']
-}
-
-function textToLines(content: string, maxChars = 95) {
-    const lines: string[] = []
-    const paragraphs = content.replace(/\r\n/g, '\n').split('\n')
-
-    for (const paragraph of paragraphs) {
-        if (!paragraph.trim()) {
-            lines.push('')
-            continue
-        }
-        lines.push(...wrapLine(paragraph, maxChars))
-    }
-
-    return lines
-}
+export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
     try {
@@ -62,61 +17,32 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid slug' }, { status: 400 })
         }
 
-        const doc = await xataFindOne<DocRecord>('documents', { slug })
-        const content = (doc?.content ?? '').trim()
-
-        if (!content) {
-            return NextResponse.json({ error: 'No content to export' }, { status: 404 })
+        const fileName = PDF_FILES_BY_SLUG[slug]
+        if (!fileName) {
+            return NextResponse.json({ error: 'No uploaded PDF configured for this slug' }, { status: 404 })
         }
 
-        const pdf = await PDFDocument.create()
-        const font = await pdf.embedFont(StandardFonts.Helvetica)
+        const filePath = path.join(DOCS_DIRECTORY, fileName)
 
-        const pageWidth = 595
-        const pageHeight = 842
-        const margin = 50
-        const lineHeight = 15
-        const fontSize = 11
-
-        const lines = textToLines(content, 95)
-
-        let page = pdf.addPage([pageWidth, pageHeight])
-        let y = pageHeight - margin
-
-        const title = `${slug} export`
-        page.drawText(title, {
-            x: margin,
-            y,
-            size: 13,
-            font,
-            color: rgb(0.15, 0.15, 0.15),
-        })
-        y -= lineHeight * 1.5
-
-        for (const line of lines) {
-            if (y <= margin) {
-                page = pdf.addPage([pageWidth, pageHeight])
-                y = pageHeight - margin
+        let pdfBuffer: Buffer
+        try {
+            pdfBuffer = await fs.readFile(filePath)
+        } catch (error: unknown) {
+            const code = (error as NodeJS.ErrnoException)?.code
+            if (code === 'ENOENT') {
+                return NextResponse.json(
+                    { error: `Uploaded file not found in docs folder: ${fileName}` },
+                    { status: 404 },
+                )
             }
-
-            page.drawText(line, {
-                x: margin,
-                y,
-                size: fontSize,
-                font,
-                color: rgb(0, 0, 0),
-            })
-
-            y -= lineHeight
+            throw error
         }
 
-        const pdfBytes = await pdf.save()
-
-        return new NextResponse(Buffer.from(pdfBytes), {
+        return new NextResponse(new Uint8Array(pdfBuffer), {
             status: 200,
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${slug}.pdf"`,
+                'Content-Disposition': `attachment; filename="${fileName}"`,
                 'Cache-Control': 'no-store',
             },
         })

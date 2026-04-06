@@ -253,9 +253,12 @@ export default function DocsPage() {
 
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
+      const contentDisposition = res.headers.get('Content-Disposition') ?? ''
+      const fileNameMatch = contentDisposition.match(/filename="?([^\"]+)"?/i)
+      const fileName = fileNameMatch?.[1] ?? 'tana-buddy-spec.pdf'
       const a = document.createElement('a')
       a.href = url
-      a.download = 'tana-buddy-spec.pdf'
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -290,7 +293,7 @@ export default function DocsPage() {
           >
             {downloadingPdf ? 'Preparing PDF…' : 'Download Tana Buddy Spec PDF'}
           </button>
-          <span className="text-xs text-3">The spec itself is download-only. The editable tabs below contain the extracted working docs.</span>
+          <span className="text-xs text-3">Uploaded and ready for download.</span>
         </div>
       </div>
 
